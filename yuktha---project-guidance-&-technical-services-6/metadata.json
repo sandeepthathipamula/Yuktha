@@ -1,0 +1,6 @@
+{
+  "name": "Yuktha - Project Guidance & Technical Services",
+  "description": "Production-grade project guidance and technical services platform for students with IEEE documentation, viva preparation, and admin portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
