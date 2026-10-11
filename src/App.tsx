@@ -30,6 +30,14 @@ import AdminStudentsList from './components/AdminStudentsList';
 import SourceCodeDownloadModal from './components/SourceCodeDownloadModal';
 import PricingModal from './components/PricingModal';
 import { Smartphone, Monitor } from 'lucide-react';
+import {
+  fetchProposalsFromApi,
+  createProposalInApi,
+  updateProposalInApi,
+  deleteProposalInApi,
+  syncStudentUserInApi,
+  checkDbHealth
+} from './utils/api';
 
 export default function App() {
   // Navigation & User State
@@ -45,7 +53,7 @@ export default function App() {
   const [studentTab, setStudentTab] = useState<'home' | 'projects' | 'submissions' | 'profile'>('home');
   const [adminTab, setAdminTab] = useState<'dashboard' | 'proposals' | 'students' | 'projects'>('dashboard');
 
-  // Proposal State (persisted in localStorage)
+  // Proposal State (persisted in MySQL and cached in localStorage)
   const [proposals, setProposals] = useState<Proposal[]>(() => {
     try {
       const saved = localStorage.getItem('yuktha_proposals');
@@ -64,13 +72,40 @@ export default function App() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [deviceFrameMode, setDeviceFrameMode] = useState<'mobile' | 'wide'>('mobile');
+  const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string }>({
+    connected: false,
+    message: ''
+  });
 
-  // Sync to localStorage
+  // Synchronize proposals from MySQL database
+  const syncFromDb = async () => {
+    try {
+      const res = await fetchProposalsFromApi();
+      if (res.fromDb && Array.isArray(res.proposals) && res.proposals.length > 0) {
+        setProposals(res.proposals);
+        setDbStatus({ connected: true, message: 'MySQL Connected' });
+      } else {
+        const health = await checkDbHealth();
+        setDbStatus({ connected: health.connected, message: health.message });
+      }
+    } catch (e) {
+      console.error('Failed to sync from MySQL:', e);
+    }
+  };
+
+  useEffect(() => {
+    syncFromDb();
+    // Refresh periodically so student mobile submissions and admin updates sync automatically
+    const interval = setInterval(syncFromDb, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Sync to localStorage as offline cache
   useEffect(() => {
     try {
       localStorage.setItem('yuktha_proposals', JSON.stringify(proposals));
     } catch (e) {
-      console.error('Failed to save proposals', e);
+      console.error('Failed to cache proposals', e);
     }
   }, [proposals]);
 
@@ -94,6 +129,7 @@ export default function App() {
     setActiveRole('admin');
     setCurrentScreen('admin_portal');
     setAdminTab('dashboard');
+    syncFromDb();
   };
 
   const handleStudentLoginSuccess = (student: StudentUser) => {
@@ -101,30 +137,61 @@ export default function App() {
     setActiveRole('student');
     setIsStudentAuthOpen(false);
     setCurrentScreen('student_portal');
+    syncStudentUserInApi(student).catch(() => {});
+    syncFromDb();
   };
 
-  const handleNewProposalSubmit = (newProposal: Proposal) => {
+  const handleNewProposalSubmit = async (newProposal: Proposal) => {
     if (!studentUser) {
-      setStudentUser({
+      const newStudent: StudentUser = {
         id: `student-${Date.now()}`,
         name: newProposal.studentName,
         email: newProposal.studentEmail,
         phone: newProposal.studentPhone,
         college: newProposal.college
-      });
+      };
+      setStudentUser(newStudent);
+      syncStudentUserInApi(newStudent).catch(() => {});
     }
-    setProposals(prev => [newProposal, ...prev]);
-    setLastSubmittedProposal(newProposal);
+
+    // Persist to MySQL database
+    let createdProposal = newProposal;
+    try {
+      const res = await createProposalInApi(newProposal);
+      if (res.fromDb) {
+        createdProposal = res.proposal;
+      }
+    } catch (e) {
+      console.error('Failed to save proposal to MySQL:', e);
+    }
+
+    setProposals(prev => [createdProposal, ...prev.filter(p => p.id !== createdProposal.id)]);
+    setLastSubmittedProposal(createdProposal);
     setProposalPrefillProject(null);
     setCurrentScreen('submission_success');
   };
 
-  const handleUpdateProposal = (updated: Proposal) => {
+  const handleUpdateProposal = async (updated: Proposal) => {
     setProposals(prev => prev.map(p => p.id === updated.id ? updated : p));
+    // Persist update to MySQL database
+    try {
+      const res = await updateProposalInApi(updated);
+      if (res.fromDb) {
+        setProposals(prev => prev.map(p => p.id === res.proposal.id ? res.proposal : p));
+      }
+    } catch (e) {
+      console.error('Failed to update proposal in MySQL:', e);
+    }
   };
 
-  const handleDeleteProposal = (id: string) => {
+  const handleDeleteProposal = async (id: string) => {
     setProposals(prev => prev.filter(p => p.id !== id));
+    // Persist deletion to MySQL database
+    try {
+      await deleteProposalInApi(id);
+    } catch (e) {
+      console.error('Failed to delete proposal in MySQL:', e);
+    }
   };
 
   const handleSelectProjectForGuidance = (project: ProjectCatalogItem) => {

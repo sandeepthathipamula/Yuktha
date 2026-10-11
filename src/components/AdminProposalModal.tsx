@@ -40,7 +40,7 @@ export default function AdminProposalModal({
     }, 800);
   };
 
-  const statusOptions: ProposalStatus[] = ['New', 'Contacted', 'In Review', 'Converted', 'Completed'];
+  const statusOptions: ProposalStatus[] = ['New', 'Contacted', 'In Review', 'Converted', 'Approved', 'Rejected', 'Completed'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -111,9 +111,43 @@ export default function AdminProposalModal({
 
         {/* Admin Controls: Status & Fee */}
         <div className="p-4 bg-red-50/40 border border-red-100 rounded-2xl space-y-3.5 mb-5 text-xs">
-          <h3 className="font-bold text-red-900 uppercase tracking-wider text-[11px]">
-            Team Yuktha Action & Pricing
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-red-900 uppercase tracking-wider text-[11px]">
+              Team Yuktha Action & Pricing
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus('Approved');
+                  setTeamUpdate('Proposal approved by Team Yuktha. Technical guidance initiated.');
+                }}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer ${
+                  status === 'Approved' || status === 'Converted'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                }`}
+              >
+                <Check className="w-3 h-3" />
+                <span>Approve</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus('Rejected');
+                  setTeamUpdate('Requirements not aligned with academic scope. Re-submission recommended.');
+                }}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer ${
+                  status === 'Rejected'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                }`}
+              >
+                <X className="w-3 h-3" />
+                <span>Reject</span>
+              </button>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>

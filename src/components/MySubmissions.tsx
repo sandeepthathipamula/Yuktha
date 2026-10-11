@@ -28,7 +28,10 @@ export default function MySubmissions({
       case 'In Review':
         return 'text-amber-600 bg-amber-50 border-amber-200';
       case 'Converted':
+      case 'Approved':
         return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+      case 'Rejected':
+        return 'text-rose-700 bg-rose-50 border-rose-200';
       case 'Completed':
         return 'text-purple-700 bg-purple-50 border-purple-200';
       default:
@@ -94,7 +97,7 @@ export default function MySubmissions({
         {/* Filter Pills */}
         {proposals.length > 1 && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
-            {['All', 'New', 'Contacted', 'In Review', 'Converted', 'Completed'].map(st => (
+            {['All', 'New', 'In Review', 'Approved', 'Rejected', 'Contacted', 'Converted', 'Completed'].map(st => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}

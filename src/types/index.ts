@@ -1,6 +1,6 @@
 export type UserRole = 'student' | 'admin';
 
-export type ProposalStatus = 'New' | 'Contacted' | 'In Review' | 'Converted' | 'Completed';
+export type ProposalStatus = 'New' | 'Contacted' | 'In Review' | 'Converted' | 'Approved' | 'Rejected' | 'Completed';
 
 export type ProjectType = 'Major Project' | 'Minor Project';
 
